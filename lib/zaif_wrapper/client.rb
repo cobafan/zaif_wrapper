@@ -23,12 +23,35 @@ module ZaifWrapper
         request(path)
       end
 
-      ## currency_pairs/{currency_pair}
+      ## currency_pairs/#{currency_pair}
       def currency_pairs(currency_pair)
         path = "currency_pairs/#{currency_pair}"
         request(path)
       end
 
+      ## /last_price/#{currency_pair}
+      def last_price(currency_pair)
+        path = "last_price/#{currency_pair}"
+        request(path)
+      end
+
+      ## /ticker/#{currency_pair}
+      def ticker(currency_pair)
+        path = "ticker/#{currency_pair}"
+        request(path)
+      end
+
+      ## /trades/#{currency_pair}
+      def trades(currency_pair)
+        path = "trades/#{currency_pair}"
+        request(path)
+      end
+
+      ## /depth/#{currency_pair}
+      def depth(currency_pair)
+        path = "depth/#{currency_pair}"
+        request(path)
+      end
     end
   end
 end
