@@ -19,6 +19,7 @@ GEM
     docile (1.1.5)
     domain_name (0.5.20170404)
       unf (>= 0.0.5, < 1.0.0)
+    dotenv (2.2.1)
     http-cookie (1.0.3)
       domain_name (~> 0.5)
     json (2.1.0)
@@ -57,6 +58,7 @@ DEPENDENCIES
   bundler (~> 1.16)
   byebug
   coveralls
+  dotenv
   json
   json_expressions
   minitest

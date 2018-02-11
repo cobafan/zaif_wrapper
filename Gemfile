@@ -9,3 +9,4 @@ gem 'byebug'
 gem 'coveralls', require: false
 gem 'json'
 gem 'json_expressions'
+gem 'dotenv'
