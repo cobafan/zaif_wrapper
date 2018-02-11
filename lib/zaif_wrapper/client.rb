@@ -252,10 +252,6 @@ module ZaifWrapper
       def initialize(port = 8888)
         @port = port
       end
-      def request(path)
-        response = RestClient.get "#{REQUEST_URL_BASE}#{path}"
-        JSON.parse(response.body)
-      end
 
       ## wss://ws.zaif.jp/stream?currency_pair={currency_pair}
       def stream(currency_pair, output_filename = nil)
