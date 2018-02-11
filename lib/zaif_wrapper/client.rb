@@ -2,7 +2,7 @@
 require 'faraday'
 require 'json'
 
-module Zaif_wrapper
+module ZaifWrapper
   module Client
     class ZaifPublicApi
       REQUEST_URL_BASE = 'https://api.zaif.jp/api/1/'
@@ -13,15 +13,22 @@ module Zaif_wrapper
           response = conn.get do |req|
             req.url path
           end
-          # req.params['limit'] = 100
         end
         JSON.parse(response.body)
       end
+
       ## currencies/#{currency_code}
       def currencies(currency_code)
         path = "currencies/#{currency_code}"
         request(path)
       end
+
+      ## currency_pairs/{currency_pair}
+      def currency_pairs(currency_pair)
+        path = "currency_pairs/#{currency_pair}"
+        request(path)
+      end
+
     end
   end
 end
