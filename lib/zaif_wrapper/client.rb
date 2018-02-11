@@ -8,46 +8,25 @@ module ZaifWrapper
   module Client
     class ZaifPublicApi
       REQUEST_URL_BASE = 'https://api.zaif.jp/api/1/'
+      METHODS = {
+                  :currencies     => 'currency_code',
+                  :currency_pairs => 'currency_pair',
+                  :last_price     => 'currency_pair',
+                  :ticker         => 'currency_pair',
+                  :trades         => 'currency_pair',
+                  :depth          => 'currency_pair'
+                }.freeze
 
       def request(path)
         response = RestClient.get "#{REQUEST_URL_BASE}#{path}"
         JSON.parse(response.body)
       end
 
-      ## currencies/#{currency_code}
-      def currencies(currency_code)
-        path = "currencies/#{currency_code}"
-        request(path)
-      end
-
-      ## currency_pairs/#{currency_pair}
-      def currency_pairs(currency_pair)
-        path = "currency_pairs/#{currency_pair}"
-        request(path)
-      end
-
-      ## /last_price/#{currency_pair}
-      def last_price(currency_pair)
-        path = "last_price/#{currency_pair}"
-        request(path)
-      end
-
-      ## /ticker/#{currency_pair}
-      def ticker(currency_pair)
-        path = "ticker/#{currency_pair}"
-        request(path)
-      end
-
-      ## /trades/#{currency_pair}
-      def trades(currency_pair)
-        path = "trades/#{currency_pair}"
-        request(path)
-      end
-
-      ## /depth/#{currency_pair}
-      def depth(currency_pair)
-        path = "depth/#{currency_pair}"
-        request(path)
+      METHODS.each do |method_name, params|
+        define_method(method_name) { |params|
+          path = "#{method_name.to_s}/#{params}"
+          request(path)
+        }
       end
     end
 
@@ -246,6 +225,7 @@ module ZaifWrapper
         OpenSSL::HMAC::hexdigest(OpenSSL::Digest.new('sha512'), @api_secret, body.to_s)
       end
     end
+
     class ZaifStreamApi
       REQUEST_URL_BASE = 'wss://ws.zaif.jp:'
 

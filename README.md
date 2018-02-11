@@ -26,8 +26,7 @@ Require zaif_wrapper:
 require 'zaif_wrapper'
 ```
 
-Create a new instance of the REST Client Class:
-
+#### Public Client
 ```ruby
 # If you only plan on touching public API endpoints.
 client = Zaif_wrapper::Client::ZaifPublicApi.new
@@ -36,13 +35,49 @@ client = Zaif_wrapper::Client::ZaifPublicApi.new
 Create various requests:
 
 ```ruby
-# Ping the server
 client.currencies('btc') # => [{ "name": "btc", "is_token": false }]
-
+client.currency_pairs('btc_jpy')
+client.last_price('btc_jpy')
+client.depth('btc_jpy')
 ```
 
-#### WebSocket Client
+#### Private Client
+```ruby
+# If you only plan on touching Future API endpoints.
+client = Zaif_wrapper::Client::ZaifPrivateApi.new(api_key, api_secret)
+```
 
+```ruby
+client.currencies('btc') # => [{ "name": "btc", "is_token": false }]
+client.currency_pairs('btc_jpy')
+client.last_price('btc_jpy')
+client.depth('btc_jpy')
+```
+
+#### Future Client(No Test)
+```ruby
+# If you only plan on touching Future API endpoints.
+client = Zaif_wrapper::Client::ZaifFutureApi.new
+```
+
+#### Future Client(No Test)
+```ruby
+# If you only plan on touching Future API endpoints.
+client = Zaif_wrapper::Client::ZaifFutureApi.new
+```
+
+#### Leverage Client(No Test)
+```ruby
+# If you only plan on touching Leverage API endpoints.
+client = Zaif_wrapper::Client::ZaifLeverageApi.new
+```
+
+#### WebSocket Client(No Test)
+```ruby
+# If you only plan on connecting WebSocket API endpoints.
+client = Zaif_wrapper::Client::ZaifStreamApi.new
+client.stream('btc_jpy')
+```
 
 ## Contributing
 
