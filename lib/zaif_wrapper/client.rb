@@ -2,6 +2,7 @@
 require 'rest-client'
 require 'json'
 require 'byebug'
+require 'websocket-client-simple'
 
 module ZaifWrapper
   module Client
@@ -243,6 +244,38 @@ module ZaifWrapper
 
       def create_signature(body)
         OpenSSL::HMAC::hexdigest(OpenSSL::Digest.new('sha512'), @api_secret, body.to_s)
+      end
+    end
+    class ZaifStreamApi
+      REQUEST_URL_BASE = 'wss://ws.zaif.jp:'
+
+      def initialize(port = 8888)
+        @port = port
+      end
+      def request(path)
+        response = RestClient.get "#{REQUEST_URL_BASE}#{path}"
+        JSON.parse(response.body)
+      end
+
+      ## wss://ws.zaif.jp/stream?currency_pair={currency_pair}
+      def stream(currency_pair, output_filename = nil)
+        f = if output_filename.nil?
+              STDOUT
+            else
+              File.open(output_filename, 'a')
+            end
+
+        ws = WebSocket::Client::Simple.connect "#{REQUEST_URL_BASE}#{@port}/stream?currency_pair=#{currency_pair}"
+        ws.on :message do |msg|
+          f.puts msg.data + "\n"
+        end
+
+        ws.on :close do |e|
+          f.close unless output_filename.nil?
+        end
+
+        loop do
+        end
       end
     end
   end
