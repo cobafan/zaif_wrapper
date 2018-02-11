@@ -4,6 +4,7 @@ PATH
     zaif_wrapper (0.1.0)
       json
       rest-client
+      websocket-client-simple
 
 GEM
   remote: https://rubygems.org/
@@ -20,6 +21,7 @@ GEM
     domain_name (0.5.20170404)
       unf (>= 0.0.5, < 1.0.0)
     dotenv (2.2.1)
+    event_emitter (0.2.6)
     http-cookie (1.0.3)
       domain_name (~> 0.5)
     json (2.1.0)
@@ -50,6 +52,10 @@ GEM
     unf (0.1.4)
       unf_ext
     unf_ext (0.0.7.5)
+    websocket (1.2.5)
+    websocket-client-simple (0.3.0)
+      event_emitter
+      websocket
 
 PLATFORMS
   ruby
