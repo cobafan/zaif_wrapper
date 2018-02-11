@@ -176,5 +176,74 @@ module ZaifWrapper
         request(path)
       end
     end
+
+    class ZaifLeverageApi
+      REQUEST_URL_BASE = 'https://api.zaif.jp/tlapi'
+
+      def initialize(api_key, api_secret)
+        @api_key = api_key
+        @api_secret = api_secret
+      end
+
+      def request(method, params = {})
+        body = {
+            'method' => method,
+            'nonce' => get_nonce
+        }
+        signature_text = "method=#{method}&nonce=#{get_nonce}"
+        unless params.empty?
+          params.each { |param|
+            body.store(param[0], param[1])
+            signature_text = "#{signature_text}&#{param[0]}=#{param[1]}"
+          }
+        end
+
+        response = RestClient.post REQUEST_URL_BASE, body, {
+            content_type: :json,
+            accept: :json,
+            key: @api_key,
+            sign: create_signature(signature_text)
+        }
+        JSON.parse(response.body)
+      end
+
+      def get_positions(params = {})
+        raise "Required parameters are missing" if params["type"].nil? || (params["type"] == 'futures' && params["group_id"].nil?)
+        request('get_positions', params)
+      end
+
+      def position_history(params = {})
+        raise "Required parameters are missing" if params["type"].nil? || (params["type"] == 'futures' && params["group_id"].nil?)
+        request('position_history', params)
+      end
+
+      def active_positions(params = {})
+        raise "Required parameters are missing" if params["type"].nil? || (params["type"] == 'futures' && params["group_id"].nil?)
+        request('active_positions', params)
+      end
+
+      def create_position(params = {})
+        raise "Required parameters are missing" if params["type"].nil? || (params["type"] == 'futures' && params["group_id"].nil?) || params["currency_pair"].nil? || params["action"].nil? || params["price"].nil? || params["amount"].nil? || params["leverage"].nil?
+        request('create_position', params)
+      end
+
+      def change_position(params = {})
+        raise "Required parameters are missing" if params["type"].nil? || (params["type"] == 'futures' && params["group_id"].nil?) || params["leverage_id"].nil? || params["price"].nil?
+        request('change_position', params)
+      end
+
+      def cancel_position(params = {})
+        raise "Required parameters are missing" if params["type"].nil? || (params["type"] == 'futures' && params["group_id"].nil?) || params["leverage_id"].nil?
+        request('cancel_position', params)
+      end
+
+      def get_nonce
+        Time.now.to_f.to_i
+      end
+
+      def create_signature(body)
+        OpenSSL::HMAC::hexdigest(OpenSSL::Digest.new('sha512'), @api_secret, body.to_s)
+      end
+    end
   end
 end

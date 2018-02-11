@@ -12,7 +12,7 @@ Dotenv.load
 require 'json_expressions/minitest'
 Coveralls.wear!
 
-class ZaifPrivateApiTest < MiniTest::Test
+class ZaifPrivateApi < MiniTest::Test
   def setup
     @client = ZaifWrapper::Client::ZaifPrivateApi.new(ENV['ZAIF_API_KEY'], ENV['ZAIF_API_SECRET'])
   end
