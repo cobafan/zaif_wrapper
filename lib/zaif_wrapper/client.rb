@@ -9,9 +9,26 @@ module ZaifWrapper
     class ZaifParentApi
       PUBLIC_REQUEST_URL_BASE  = 'https://api.zaif.jp/api/1/'
       PRIVATE_REQUEST_URL_BASE = 'https://api.zaif.jp/tapi'
+      LEVERAGE_REQUEST_URL_BASE = 'https://api.zaif.jp/tlapi'
 
-      def get_request(path)
-        response = RestClient.get "#{PUBLIC_REQUEST_URL_BASE}#{path}"
+      def get_request(host, path)
+        response = RestClient.get "#{host}#{path}"
+        JSON.parse(response.body)
+      end
+
+      def post_request(body, host)
+        body.store('nonce', get_nonce)
+        signature_text = ""
+        body.each_with_index { |param, i|
+          signature_text = signature_text + '&' if i != 0
+          signature_text = "#{signature_text}#{param[0]}=#{param[1]}"
+        }
+        response = RestClient.post host, body, {
+            content_type: :json,
+            accept: :json,
+            key: @api_key,
+            sign: create_signature(signature_text)
+        }
         JSON.parse(response.body)
       end
 
@@ -37,7 +54,7 @@ module ZaifWrapper
       METHODS.each do |method_name, params|
         define_method(method_name) { |params|
           path = "#{method_name.to_s}/#{params}"
-          get_request(path)
+          get_request(PUBLIC_REQUEST_URL_BASE, path)
         }
       end
     end
@@ -57,7 +74,7 @@ module ZaifWrapper
             define_method(name) do |body = {}|
               check(name, body)
               body.store("method", name.to_s)
-              post_request(body)
+              post_request(body, PRIVATE_REQUEST_URL_BASE)
             end
           end
           if args.length == 1
@@ -66,22 +83,6 @@ module ZaifWrapper
             __send__(name)
           end
         end
-      end
-
-      def post_request(body)
-        body.store('nonce', get_nonce)
-        signature_text = ""
-        body.each_with_index { |param, i|
-          signature_text = signature_text + '&' if i != 0
-          signature_text = "#{signature_text}#{param[0]}=#{param[1]}"
-        }
-        response = RestClient.post PRIVATE_REQUEST_URL_BASE, body, {
-            content_type: :json,
-            accept: :json,
-            key: @api_key,
-            sign: create_signature(signature_text)
-        }
-        JSON.parse(response.body)
       end
 
       def check(method_name, body)
@@ -139,64 +140,48 @@ module ZaifWrapper
       end
     end
 
-    class ZaifLeverageApi
-      REQUEST_URL_BASE = 'https://api.zaif.jp/tlapi'
+    class ZaifLeverageApi < ZaifParentApi
+      METHODS = ['get_positions', 'position_history', 'active_positions', 'create_position', 'change_position', 'cancel_position'].freeze
 
       def initialize(api_key, api_secret)
         @api_key = api_key
         @api_secret = api_secret
       end
 
-      def request(method, params = {})
-        body = {
-            'method' => method,
-            'nonce' => get_nonce
-        }
-        signature_text = "method=#{method}&nonce=#{get_nonce}"
-        unless params.empty?
-          params.each { |param|
-            body.store(param[0], param[1])
-            signature_text = "#{signature_text}&#{param[0]}=#{param[1]}"
-          }
+      def method_missing(name, *args)
+        if METHODS.include?(name.to_s)
+          klass = class << self; self end
+          klass.class_eval do
+            define_method(name) do |body = {}|
+              check(name, body)
+              body.store("method", name.to_s)
+              post_request(body, LEVERAGE_REQUEST_URL_BASE)
+            end
+          end
+          if args.length == 1
+            __send__(name, args[0])
+          else
+            __send__(name)
+          end
         end
-
-        response = RestClient.post REQUEST_URL_BASE, body, {
-            content_type: :json,
-            accept: :json,
-            key: @api_key,
-            sign: create_signature(signature_text)
-        }
-        JSON.parse(response.body)
       end
 
-      def get_positions(params = {})
-        raise "Required parameters are missing" if params["type"].nil? || (params["type"] == 'futures' && params["group_id"].nil?)
-        request('get_positions', params)
-      end
 
-      def position_history(params = {})
-        raise "Required parameters are missing" if params["type"].nil? || (params["type"] == 'futures' && params["group_id"].nil?)
-        request('position_history', params)
-      end
-
-      def active_positions(params = {})
-        raise "Required parameters are missing" if params["type"].nil? || (params["type"] == 'futures' && params["group_id"].nil?)
-        request('active_positions', params)
-      end
-
-      def create_position(params = {})
-        raise "Required parameters are missing" if params["type"].nil? || (params["type"] == 'futures' && params["group_id"].nil?) || params["currency_pair"].nil? || params["action"].nil? || params["price"].nil? || params["amount"].nil? || params["leverage"].nil?
-        request('create_position', params)
-      end
-
-      def change_position(params = {})
-        raise "Required parameters are missing" if params["type"].nil? || (params["type"] == 'futures' && params["group_id"].nil?) || params["leverage_id"].nil? || params["price"].nil?
-        request('change_position', params)
-      end
-
-      def cancel_position(params = {})
-        raise "Required parameters are missing" if params["type"].nil? || (params["type"] == 'futures' && params["group_id"].nil?) || params["leverage_id"].nil?
-        request('cancel_position', params)
+      def check(method_name, body)
+        case method_name
+          when 'get_positions' then
+            raise "Required parameters are missing" if body["type"].nil? || (body["type"] == 'futures' && body["group_id"].nil?)
+          when 'position_history' then
+            raise "Required parameters are missing" if body["type"].nil? || (body["type"] == 'futures' && body["group_id"].nil?)
+          when 'active_positions' then
+            raise "Required parameters are missing" if body["type"].nil? || (body["type"] == 'futures' && body["group_id"].nil?)
+          when 'create_position' then
+            raise "Required parameters are missing" if body["type"].nil? || (body["type"] == 'futures' && body["group_id"].nil?) || body["currency_pair"].nil? || body["action"].nil? || body["price"].nil? || body["amount"].nil? || body["leverage"].nil?
+          when 'change_position' then
+            raise "Required parameters are missing" if body["type"].nil? || (body["type"] == 'futures' && body["group_id"].nil?) || body["leverage_id"].nil? || body["price"].nil?
+          when 'cancel_position' then
+            raise "Required parameters are missing" if body["type"].nil? || (body["type"] == 'futures' && body["group_id"].nil?) || body["leverage_id"].nil?
+        end
       end
     end
 
