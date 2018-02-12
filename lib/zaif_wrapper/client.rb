@@ -6,8 +6,25 @@ require 'websocket-client-simple'
 
 module ZaifWrapper
   module Client
-    class ZaifPublicApi
-      REQUEST_URL_BASE = 'https://api.zaif.jp/api/1/'
+    class ZaifParentApi
+      PUBLIC_REQUEST_URL_BASE  = 'https://api.zaif.jp/api/1/'
+      PRIVATE_REQUEST_URL_BASE = 'https://api.zaif.jp/tapi'
+
+      def get_request(path)
+        response = RestClient.get "#{PUBLIC_REQUEST_URL_BASE}#{path}"
+        JSON.parse(response.body)
+      end
+
+      def get_nonce
+        Time.now.to_f.to_i
+      end
+
+      def create_signature(body)
+        OpenSSL::HMAC::hexdigest(OpenSSL::Digest.new('sha512'), @api_secret, body.to_s)
+      end
+
+    end
+    class ZaifPublicApi < ZaifParentApi
       METHODS = {
                   :currencies     => 'currency_code',
                   :currency_pairs => 'currency_pair',
@@ -17,41 +34,48 @@ module ZaifWrapper
                   :depth          => 'currency_pair'
                 }.freeze
 
-      def request(path)
-        response = RestClient.get "#{REQUEST_URL_BASE}#{path}"
-        JSON.parse(response.body)
-      end
-
       METHODS.each do |method_name, params|
         define_method(method_name) { |params|
           path = "#{method_name.to_s}/#{params}"
-          request(path)
+          get_request(path)
         }
       end
     end
 
-    class ZaifPrivateApi
-      REQUEST_URL_BASE = 'https://api.zaif.jp/tapi'
+    class ZaifPrivateApi < ZaifParentApi
+      METHODS = ['get_info', 'get_info2', 'get_personal_info', 'get_id_info', 'trade_history', 'active_orders', 'trade', 'cancel_order', 'withdraw', 'deposit_history', 'withdraw_history'].freeze
 
       def initialize(api_key, api_secret)
         @api_key = api_key
         @api_secret = api_secret
       end
 
-      def request(method, params = {})
-        body = {
-          'method' => method,
-          'nonce' => get_nonce
-        }
-        signature_text = "method=#{method}&nonce=#{get_nonce}"
-        unless params.empty?
-          params.each { |param|
-            body.store(param[0], param[1])
-            signature_text = "#{signature_text}&#{param[0]}=#{param[1]}"
-          }
+      def method_missing(name, *args)
+        if METHODS.include?(name.to_s)
+          klass = class << self; self end
+          klass.class_eval do
+            define_method(name) do |body = {}|
+              check(name, body)
+              body.store("method", name.to_s)
+              post_request(body)
+            end
+          end
+          if args.length == 1
+            __send__(name, args[0])
+          else
+            __send__(name)
+          end
         end
+      end
 
-        response = RestClient.post REQUEST_URL_BASE, body, {
+      def post_request(body)
+        body.store('nonce', get_nonce)
+        signature_text = ""
+        body.each_with_index { |param, i|
+          signature_text = signature_text + '&' if i != 0
+          signature_text = "#{signature_text}#{param[0]}=#{param[1]}"
+        }
+        response = RestClient.post PRIVATE_REQUEST_URL_BASE, body, {
             content_type: :json,
             accept: :json,
             key: @api_key,
@@ -60,61 +84,19 @@ module ZaifWrapper
         JSON.parse(response.body)
       end
 
-      def get_info
-        request('get_info')
-      end
-
-      def get_info2
-        request('get_info2')
-      end
-
-      def get_personal_info
-        request('get_personal_info')
-      end
-
-      def get_id_info
-        request('get_id_info')
-      end
-
-      def trade_history(params = {})
-        request('trade_history', params)
-      end
-
-      def active_orders(params = {})
-        request('active_orders', params)
-      end
-
-      def trade(params = {})
-        raise "Required parameters are missing" if params["currency_pair"].nil? || params["action"].nil? || params["price"].nil? || params["amount"].nil?
-        request('trade', params)
-      end
-
-      def cancel_order(params = {})
-        raise "Required parameters are missing" if params["order_id"].nil?
-        request('cancel_order', params)
-      end
-
-      def withdraw(params = {})
-        raise "Required parameters are missing" if params["currency"].nil? || params["address"].nil? || params["amount"].nil?
-        request('withdraw', params)
-      end
-
-      def deposit_history(params = {})
-        raise "Required parameters are missing" if params["currency"].nil?
-        request('deposit_history', params)
-      end
-
-      def withdraw_history(params = {})
-        raise "Required parameters are missing" if params["currency"].nil?
-        request('withdraw_history', params)
-      end
-
-      def get_nonce
-        Time.now.to_f.to_i
-      end
-
-      def create_signature(body)
-        OpenSSL::HMAC::hexdigest(OpenSSL::Digest.new('sha512'), @api_secret, body.to_s)
+      def check(method_name, body)
+        case method_name
+          when 'trade' then
+            raise "Required parameters are missing" if body["currency_pair"].nil? || body["action"].nil? || body["price"].nil? || body["amount"].nil?
+          when 'cancel_order' then
+            raise "Required parameters are missing" if body["order_id"].nil?
+          when 'withdraw' then
+            raise "Required parameters are missing" if body["currency"].nil? || body["address"].nil? || body["amount"].nil?
+          when 'deposit_history' then
+            raise "Required parameters are missing" if body["currency"].nil?
+          when 'withdraw_history' then
+            raise "Required parameters are missing" if body["currency"].nil?
+        end
       end
     end
 
@@ -215,14 +197,6 @@ module ZaifWrapper
       def cancel_position(params = {})
         raise "Required parameters are missing" if params["type"].nil? || (params["type"] == 'futures' && params["group_id"].nil?) || params["leverage_id"].nil?
         request('cancel_position', params)
-      end
-
-      def get_nonce
-        Time.now.to_f.to_i
-      end
-
-      def create_signature(body)
-        OpenSSL::HMAC::hexdigest(OpenSSL::Digest.new('sha512'), @api_secret, body.to_s)
       end
     end
 
