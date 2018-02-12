@@ -7,9 +7,21 @@ require 'websocket-client-simple'
 module ZaifWrapper
   module Client
     class ZaifParentApi
-      PUBLIC_REQUEST_URL_BASE  = 'https://api.zaif.jp/api/1/'
-      PRIVATE_REQUEST_URL_BASE = 'https://api.zaif.jp/tapi'
-      LEVERAGE_REQUEST_URL_BASE = 'https://api.zaif.jp/tlapi'
+      PUBLIC_REQUEST_URL_BASE   = 'https://api.zaif.jp/api/1/'.freeze
+      PRIVATE_REQUEST_URL_BASE  = 'https://api.zaif.jp/tapi'.freeze
+      FUTURE_REQUEST_URL_BASE   = 'https://api.zaif.jp/fapi/1/'.freeze
+      LEVERAGE_REQUEST_URL_BASE = 'https://api.zaif.jp/tlapi'.freeze
+      LEVERAGE_METHODS = ['get_positions', 'position_history', 'active_positions', 'create_position', 'change_position', 'cancel_position'].freeze
+      PUBLIC_METHODS = {
+          :currencies     => 'currency_code',
+          :currency_pairs => 'currency_pair',
+          :last_price     => 'currency_pair',
+          :ticker         => 'currency_pair',
+          :trades         => 'currency_pair',
+          :depth          => 'currency_pair'
+      }.freeze
+      PRIVATE_METHODS = ['get_info', 'get_info2', 'get_personal_info', 'get_id_info', 'trade_history', 'active_orders', 'trade', 'cancel_order', 'withdraw', 'deposit_history', 'withdraw_history'].freeze
+      FUTURE_METHODS = ['groups', 'last_price', 'ticker', 'trades', 'depth'].freeze
 
       def get_request(host, path)
         response = RestClient.get "#{host}#{path}"
@@ -42,16 +54,7 @@ module ZaifWrapper
 
     end
     class ZaifPublicApi < ZaifParentApi
-      METHODS = {
-                  :currencies     => 'currency_code',
-                  :currency_pairs => 'currency_pair',
-                  :last_price     => 'currency_pair',
-                  :ticker         => 'currency_pair',
-                  :trades         => 'currency_pair',
-                  :depth          => 'currency_pair'
-                }.freeze
-
-      METHODS.each do |method_name, params|
+      PUBLIC_METHODS.each do |method_name, params|
         define_method(method_name) { |params|
           path = "#{method_name.to_s}/#{params}"
           get_request(PUBLIC_REQUEST_URL_BASE, path)
@@ -60,15 +63,13 @@ module ZaifWrapper
     end
 
     class ZaifPrivateApi < ZaifParentApi
-      METHODS = ['get_info', 'get_info2', 'get_personal_info', 'get_id_info', 'trade_history', 'active_orders', 'trade', 'cancel_order', 'withdraw', 'deposit_history', 'withdraw_history'].freeze
-
       def initialize(api_key, api_secret)
         @api_key = api_key
         @api_secret = api_secret
       end
 
       def method_missing(name, *args)
-        if METHODS.include?(name.to_s)
+        if PRIVATE_METHODS.include?(name.to_s)
           klass = class << self; self end
           klass.class_eval do
             define_method(name) do |body = {}|
@@ -101,55 +102,38 @@ module ZaifWrapper
       end
     end
 
-    class ZaifFutureApi
-      REQUEST_URL_BASE = 'https://api.zaif.jp/fapi/1/'
-
-      def request(path)
-        response = RestClient.get "#{REQUEST_URL_BASE}#{path}"
-        JSON.parse(response.body)
-      end
-
-      ## /groups/#{group_id}
-      def groups(group_id)
-        path = "groups/#{group_id}"
-        request(path)
-      end
-
-      ## last_price/#{group_id}#{currency_pair}
-      def last_price(group_id, currency_pair)
-        path = "last_price/#{group_id}/#{currency_pair}"
-        request(path)
-      end
-
-      ## /ticker/#{group_id}/#{currency_pair}
-      def ticker(group_id, currency_pair)
-        path = "ticker/#{group_id}/#{currency_pair}"
-        request(path)
-      end
-
-      ## /trades/{group_id}/{currency_pair}
-      def trades(group_id, currency_pair)
-        path = "trades/#{group_id}/#{currency_pair}"
-        request(path)
-      end
-
-      ## /depth/{group_id}/{currency_pair}
-      def depth(group_id, currency_pair)
-        path = "depth/#{group_id}/#{currency_pair}"
-        request(path)
+    class ZaifFutureApi < ZaifParentApi
+      def method_missing(name, *args)
+        if FUTURE_METHODS.include?(name.to_s)
+          klass = class << self; self end
+          klass.class_eval do
+            define_method(name) do |body = []|
+              path = name
+              if body.length != 0
+                body.each do |param|
+                  path = path + "/#{param}"
+                end
+              end
+              get_request(FUTURE_REQUEST_URL_BASE, path)
+            end
+          end
+          if args.length == 1
+            __send__(name, args[0])
+          else
+            __send__(name)
+          end
+        end
       end
     end
 
     class ZaifLeverageApi < ZaifParentApi
-      METHODS = ['get_positions', 'position_history', 'active_positions', 'create_position', 'change_position', 'cancel_position'].freeze
-
       def initialize(api_key, api_secret)
         @api_key = api_key
         @api_secret = api_secret
       end
 
       def method_missing(name, *args)
-        if METHODS.include?(name.to_s)
+        if LEVERAGE_METHODS.include?(name.to_s)
           klass = class << self; self end
           klass.class_eval do
             define_method(name) do |body = {}|
@@ -165,7 +149,6 @@ module ZaifWrapper
           end
         end
       end
-
 
       def check(method_name, body)
         case method_name
