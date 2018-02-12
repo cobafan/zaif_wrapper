@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    zaif_wrapper (0.1.0)
+    zaif_wrapper (0.1.1)
       json
       rest-client
       websocket-client-simple
