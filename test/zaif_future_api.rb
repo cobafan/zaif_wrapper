@@ -5,7 +5,6 @@ require 'bundler/setup'
 require 'minitest/autorun'
 require 'zaif_wrapper'
 require 'coveralls'
-require 'byebug'
 
 require 'json_expressions/minitest'
 Coveralls.wear!
