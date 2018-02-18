@@ -11,7 +11,6 @@ module ZaifWrapper
       PRIVATE_REQUEST_URL_BASE  = 'https://api.zaif.jp/tapi'.freeze
       FUTURE_REQUEST_URL_BASE   = 'https://api.zaif.jp/fapi/1/'.freeze
       LEVERAGE_REQUEST_URL_BASE = 'https://api.zaif.jp/tlapi'.freeze
-      LEVERAGE_METHODS = ['get_positions', 'position_history', 'active_positions', 'create_position', 'change_position', 'cancel_position'].freeze
       PUBLIC_METHODS = {
           :currencies     => 'currency_code',
           :currency_pairs => 'currency_pair',
@@ -22,6 +21,7 @@ module ZaifWrapper
       }.freeze
       PRIVATE_METHODS = ['get_info', 'get_info2', 'get_personal_info', 'get_id_info', 'trade_history', 'active_orders', 'trade', 'cancel_order', 'withdraw', 'deposit_history', 'withdraw_history'].freeze
       FUTURE_METHODS = ['groups', 'last_price', 'ticker', 'trades', 'depth'].freeze
+      LEVERAGE_METHODS = ['get_positions', 'position_history', 'active_positions', 'create_position', 'change_position', 'cancel_position'].freeze
 
       def get_request(host, path)
         response = RestClient.get "#{host}#{path}"

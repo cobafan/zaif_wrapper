@@ -48,17 +48,49 @@ class ZaifPrivateApi < MiniTest::Test
   end
 
   def test_trade
+    response = @client.trade({
+                                 currency_pair: 'btc_jpy',
+                                 action: 'bid',
+                                 price: 2000000,
+                                 amount: 0.0001
+                                       })
+    assert_equal 1, response['success']
   end
 
-  def cancel_order
+  def test_cancel_order
+    @client.trade({
+                   currency_pair: 'btc_jpy',
+                   action: 'bid',
+                   price: 2000000,
+                   amount: 0.0001
+                 })
+    response = @client.active_orders
+    response2 = @client.cancel_order({
+                                         order_id: response['return'][0]
+                                     })
+    assert_equal 1, response2['success']
   end
 
-  def withdraw
+  def test_withdraw
+    response = @client.withdraw({
+                                           currency: 'xem',
+                                           address: ENV['XEM_WITHDRAW_ADDRESS'],
+                                           amount: 0.1
+                                       })
+    assert_equal 1, response['success']
   end
 
-  def deposit_history
+  def test_deposit_history
+    response = @client.deposit_history({
+                                           currency: 'jpy'
+                                       })
+    assert_equal 1, response['success']
   end
 
-  def withdraw_history
+  def test_withdraw_history
+    response = @client.withdraw_history({
+                                           currency: 'jpy'
+                                       })
+    assert_equal 1, response['success']
   end
 end
