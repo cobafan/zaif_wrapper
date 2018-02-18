@@ -12,3 +12,4 @@
 .byebug_history
 vender/
 .env
+Gemfile.lock
